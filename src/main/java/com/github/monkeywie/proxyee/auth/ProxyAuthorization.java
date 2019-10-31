@@ -1,5 +1,6 @@
 package com.github.monkeywie.proxyee.auth;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.StringUtil;
 
@@ -24,10 +25,11 @@ public class ProxyAuthorization {
     public boolean isAuthorisedRequest(HttpRequest request) {
         if (StringUtil.isNullOrEmpty(name) || StringUtil.isNullOrEmpty(password)) {
             return true;
-        } else if (!request.headers().contains("Proxy-Authorization")) {
+        } else if (!request.headers().contains(HttpHeaderNames.PROXY_AUTHORIZATION)) {
             return false;
         } else {
-            String base64 = request.headers().get("Proxy-Authorization").replace("Basic ", "");
+            String base64 = request.headers().get(HttpHeaderNames.PROXY_AUTHORIZATION)
+                    .replace("Basic ", "");
             String[] credentials = new String(Base64.getDecoder().decode(base64), StandardCharsets.UTF_8)
                     .split(":");
             if (credentials.length < 2) {

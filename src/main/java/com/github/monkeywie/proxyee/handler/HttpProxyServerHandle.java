@@ -81,6 +81,8 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                 // fix issue #42
                 ReferenceCountUtil.release(msg);
                 return;
+            }else {
+                request.headers().remove(HttpHeaderNames.PROXY_AUTHORIZATION);
             }
 
             // 第一次建立连接取host和端口号和处理代理握手
