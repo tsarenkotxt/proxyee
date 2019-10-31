@@ -1,5 +1,6 @@
 package com.github.monkeywie.proxyee.handler;
 
+import com.github.monkeywie.proxyee.auth.ProxyAuthorization;
 import com.github.monkeywie.proxyee.crt.CertPool;
 import com.github.monkeywie.proxyee.exception.HttpProxyExceptionHandle;
 import com.github.monkeywie.proxyee.intercept.HttpProxyIntercept;
@@ -39,6 +40,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
     private HttpProxyInterceptInitializer interceptInitializer;
     private HttpProxyInterceptPipeline interceptPipeline;
     private HttpProxyExceptionHandle exceptionHandle;
+    private ProxyAuthorization proxyAuthorization;
     private List requestList;
     private boolean isConnect;
 
@@ -55,17 +57,32 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
     }
 
     public HttpProxyServerHandle(HttpProxyServerConfig serverConfig, HttpProxyInterceptInitializer interceptInitializer,
-                                 ProxyConfig proxyConfig, HttpProxyExceptionHandle exceptionHandle) {
+                                 ProxyConfig proxyConfig, HttpProxyExceptionHandle exceptionHandle,
+                                 ProxyAuthorization proxyAuthorization) {
         this.serverConfig = serverConfig;
         this.proxyConfig = proxyConfig;
         this.interceptInitializer = interceptInitializer;
         this.exceptionHandle = exceptionHandle;
+        this.proxyAuthorization = proxyAuthorization;
     }
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
+
+            // deny unauthorized request
+            if (!proxyAuthorization.isAuthorisedRequest(request)) {
+                status = 2;
+                HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                        HttpResponseStatus.PROXY_AUTHENTICATION_REQUIRED);
+                ctx.writeAndFlush(response);
+                ctx.channel().pipeline().remove("httpCodec");
+                // fix issue #42
+                ReferenceCountUtil.release(msg);
+                return;
+            }
+
             // 第一次建立连接取host和端口号和处理代理握手
             if (status == 0) {
                 RequestProto requestProto = ProtoUtil.getRequestProto(request);

@@ -1,3 +1,10 @@
+> Added Proxy-Authorization(optional) to this fork                
+> Build and run:
+```bash
+mvn clean package -Pexec && \
+java -Dport=9999 -Dname=myName -Dpassword=myPass -jar target/proxyee-1.1.0-jar-with-dependencies.jar
+>```
+
 ### HTTP 代理服务器
 
     支持HTTP、HTTPS、WebSocket,HTTPS采用动态签发SSL证书,可以拦截http、https的报文并进行处理。

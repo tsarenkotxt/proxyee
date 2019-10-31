@@ -1,5 +1,6 @@
 package com.github.monkeywie.proxyee.server;
 
+import com.github.monkeywie.proxyee.auth.ProxyAuthorization;
 import com.github.monkeywie.proxyee.crt.CertPool;
 import com.github.monkeywie.proxyee.crt.CertUtil;
 import com.github.monkeywie.proxyee.exception.HttpProxyExceptionHandle;
@@ -35,6 +36,8 @@ public class HttpProxyServer {
     private HttpProxyInterceptInitializer proxyInterceptInitializer;
     private HttpProxyExceptionHandle httpProxyExceptionHandle;
     private ProxyConfig proxyConfig;
+    private ProxyAuthorization proxyAuthorization;
+    private String port;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -81,6 +84,12 @@ public class HttpProxyServer {
         if (httpProxyExceptionHandle == null) {
             httpProxyExceptionHandle = new HttpProxyExceptionHandle();
         }
+        if (proxyAuthorization == null) {
+            proxyAuthorization = new ProxyAuthorization(null, null);
+        }
+        if (port == null) {
+            port = "9999";
+        }
     }
 
     public HttpProxyServer serverConfig(HttpProxyServerConfig serverConfig) {
@@ -110,7 +119,22 @@ public class HttpProxyServer {
         return this;
     }
 
+    public HttpProxyServer proxyAuthorization(ProxyAuthorization proxyAuthorization) {
+        this.proxyAuthorization = proxyAuthorization;
+        return this;
+    }
+
+    public HttpProxyServer port(String port) {
+        this.port = port;
+        return this;
+    }
+
     public void start(int port) {
+        this.port = String.valueOf(port);
+        start();
+    }
+
+    public void start() {
         init();
         bossGroup = new NioEventLoopGroup(serverConfig.getBossGroupThreads());
         workerGroup = new NioEventLoopGroup(serverConfig.getWorkerGroupThreads());
@@ -127,11 +151,11 @@ public class HttpProxyServer {
                             ch.pipeline().addLast("httpCodec", new HttpServerCodec());
                             ch.pipeline().addLast("serverHandle",
                                     new HttpProxyServerHandle(serverConfig, proxyInterceptInitializer, proxyConfig,
-                                            httpProxyExceptionHandle));
+                                            httpProxyExceptionHandle, proxyAuthorization));
                         }
                     });
             ChannelFuture f = b
-                    .bind(port)
+                    .bind(Integer.parseInt(port))
                     .sync();
             f.channel().closeFuture().sync();
         } catch (Exception e) {
